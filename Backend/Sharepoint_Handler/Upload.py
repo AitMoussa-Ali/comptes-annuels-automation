@@ -3,14 +3,14 @@ from Config import Config
 from Sharepoint_Handler.Requests import get_token, get_drive_id
 
 
-def upload_file_to_sharepoint(filename: str, content: bytes, fond_name: str) -> bool:
+def upload_file_to_sharepoint(filename: str, content: bytes) -> bool:
     token = get_token()
     drive_id = get_drive_id(token)
 
-    folder_path = f"{Config.SHAREPOINT_FOLDER}/{fond_name}"
+    # folder_path = f"{Config.SHAREPOINT_FOLDER}/{fond_name}"
     url = (
         f"https://graph.microsoft.com/v1.0/drives/{drive_id}"
-        f"/root:/{folder_path}/{filename}:/content"
+        f"/root:/{Config.SHAREPOINT_FOLDER}/{filename}:/content"
     )
     headers = {
         "Authorization": f"Bearer {token}",

@@ -7,7 +7,7 @@ class Data_extraction:
         self.fichier_vl = fichier_vl        # bytes ou path
         self.fichier_vl_n_1 = fichier_vl_n_1
 
-    def extracting_data_n(self):
+    def extracting_data_n(self): 
         balance_n    = pd.read_excel(self.fichier_vl, "Balance ",   header=None, dtype=str)
         inventaire_n = pd.read_excel(self.fichier_vl, "Inventaire", header=None, dtype=str)
         pvmv         = pd.read_excel(self.fichier_vl, "PVMV",       header=None, dtype=str)

@@ -3,10 +3,12 @@ import math
 from fastapi import  HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
+import pandas as pd
+from Sharepoint_Handler.Write_on_excel_file import write_excel_to_sharepoint
 
 class Fond(BaseModel):
     nom: str
-    anciennete: Optional[str] = None
+    anciennete: str
 
 
 class FondsResponse(BaseModel):
@@ -68,3 +70,78 @@ def GetFonds(search, page, page_size):
         next_page=next_page,
         previous_page=previous_page
     )
+    
+def CreateFond(nom: str, anciennete: Optional[str] = None):
+    df = read_excel_from_sharepoint()
+    print("\n \n Before writing in the file")
+    print(df)
+    
+    if df is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Impossible de lire le fichier Excel depuis SharePoint.",
+        )
+
+    df = df.iloc[:, :2].copy()
+    df.columns = ["nom", "anciennete"]
+    df = df.dropna(subset=["nom"])
+
+    # Check for duplicates
+    if df["nom"].astype(str).str.strip().str.lower().eq(nom.strip().lower()).any():
+        raise HTTPException(
+            status_code=409,
+            detail=f"Le fond '{nom}' existe déjà.",
+        )
+    print("\n \n Before adding to the dataframe")
+    print(df)
+    new_row = pd.DataFrame([{"nom": nom, "anciennete": anciennete}])
+    df = pd.concat([df, new_row], ignore_index=True)
+    print("\n \n after adding to data dataframe")
+    print(df)
+    success = write_excel_to_sharepoint(df)
+    
+    if not success:
+        raise HTTPException(
+            status_code=503,
+            detail="Impossible de mettre à jour le fichier Excel sur SharePoint.",
+        )
+
+    df = read_excel_from_sharepoint()
+    print("\n \n after wrting to the file")
+    print(df)
+    return Fond(nom=nom, anciennete=anciennete)
+
+def DeleteFond(nom: str):
+    df = read_excel_from_sharepoint()
+    if df is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Impossible de lire le fichier Excel depuis SharePoint.",
+        )
+
+    df = df.iloc[:, :2].copy()
+    df.columns = ["nom", "anciennete"]
+    df = df.dropna(subset=["nom"])
+
+    mask = df["nom"].astype(str).str.strip().str.lower().eq(nom.strip().lower())
+    
+    if not mask.any():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Le fond '{nom}' est introuvable.",
+        )
+    print("before deleting ....")
+    print(df)
+    df = df.drop(df[df["nom"] == nom].index)
+    print("\n \n after deleting ....")
+    print(df)
+    
+    success = write_excel_to_sharepoint(df)
+    if not success:
+        raise HTTPException(
+            status_code=503,
+            detail="Impossible de mettre à jour le fichier Excel sur SharePoint.",
+        )
+
+    return {"message": f"Le fond '{nom}' a été supprimé avec succès."}
+

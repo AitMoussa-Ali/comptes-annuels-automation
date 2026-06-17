@@ -11,7 +11,7 @@ class Excel_macros:
         ws = self.rf.get_sheet(self.workbook, sheet_name)
         ws.Cells.Clear()
 
-        df_clean = df.where(pd.notna(df), other=None)
+        df_clean = df.where(pd.notna(df), other=" ")
         for col in df_clean.columns:
             if pd.api.types.is_datetime64_any_dtype(df_clean[col]):
                 df_clean[col] = df_clean[col].dt.strftime("%d/%m/%Y")
@@ -31,10 +31,12 @@ class Excel_macros:
             last_row = ws.Cells(ws.Rows.Count, 1).End(-4162).Row
             for row in range(1, last_row + 1):
                 value = ws.Cells(row, 1).Value
-                if value not in (None, ""):
-                    ws.Cells(row, 1).Value = str(value)
-        print("Colonne A convertie en texte")
-
+                if value not in (None, " "):
+                    # ws.Cells(row, 1).Value = str(value)
+                    ws.Cells(row, 1).Value = "'" + str(value)
+        
+        print("Les données ont été remplies automatiquement")
+ 
     def effacer_donnees_et_mise_en_forme(self):
         for nom_feuille in ["Balance", "Balance N-1", "Inventaire", "Inventaire N-1", "PVMV"]:
             try:
@@ -73,3 +75,4 @@ class Excel_macros:
                         str(row_base["E"]) + str(row_base["F"]) + str(row_base["G"])
                     )
         print("Codes ISIN créés.")
+        

@@ -5,7 +5,7 @@ class Reading_files:
     def __init__(self):
         self.excel = None
         self.workbook = None
-
+ 
     def open_excel_file(self, path):
         print("Ouverture du fichier...")
         self.excel = DispatchEx("Excel.Application")

@@ -1,7 +1,9 @@
 
 from fastapi import APIRouter,  Query
-from Controllers.FondController import FondsResponse
-from Controllers.FondController import GetFonds
+from Controllers.FondController import FondsResponse, Fond
+from Controllers.FondController import GetFonds, CreateFond, DeleteFond
+from fastapi import Form
+
 
 router = APIRouter(prefix="/fonds", tags=["Fonds"])
 
@@ -14,3 +16,17 @@ def get_fonds(
     search: str = Query(default="", description="Filter by fund name (case-insensitive)"),
 ):
     return GetFonds(page=page, page_size=page_size, search=search)
+
+@router.post("/")
+def create_fond(
+    nom: str = Form(...),
+    anciennete: str = Form(...)
+):
+    return CreateFond(nom=nom, anciennete=anciennete)
+
+@router.delete("/")
+def delete_fond(
+    nom: str = Form(...)
+):
+    return DeleteFond(nom=nom)
+    
