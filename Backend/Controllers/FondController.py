@@ -73,8 +73,7 @@ def GetFonds(search, page, page_size):
     
 def CreateFond(nom: str, anciennete: Optional[str] = None):
     df = read_excel_from_sharepoint()
-    print("\n \n Before writing in the file")
-    print(df)
+
     
     if df is None:
         raise HTTPException(
@@ -92,12 +91,11 @@ def CreateFond(nom: str, anciennete: Optional[str] = None):
             status_code=409,
             detail=f"Le fond '{nom}' existe déjà.",
         )
-    print("\n \n Before adding to the dataframe")
-    print(df)
+
+    
     new_row = pd.DataFrame([{"nom": nom, "anciennete": anciennete}])
     df = pd.concat([df, new_row], ignore_index=True)
-    print("\n \n after adding to data dataframe")
-    print(df)
+
     success = write_excel_to_sharepoint(df)
     
     if not success:
@@ -107,8 +105,7 @@ def CreateFond(nom: str, anciennete: Optional[str] = None):
         )
 
     df = read_excel_from_sharepoint()
-    print("\n \n after wrting to the file")
-    print(df)
+
     return Fond(nom=nom, anciennete=anciennete)
 
 def DeleteFond(nom: str):
@@ -130,11 +127,9 @@ def DeleteFond(nom: str):
             status_code=404,
             detail=f"Le fond '{nom}' est introuvable.",
         )
-    print("before deleting ....")
-    print(df)
+
     df = df.drop(df[df["nom"] == nom].index)
-    print("\n \n after deleting ....")
-    print(df)
+
     
     success = write_excel_to_sharepoint(df)
     if not success:

@@ -19,7 +19,7 @@ def read_excel_from_sharepoint() -> pd.DataFrame:
         )
         response.raise_for_status()
         
-        df = pd.read_excel(io.BytesIO(response.content), skiprows=1)
+        df = pd.read_excel(io.BytesIO(response.content))
         
         print("✅ File read successfully from SharePoint")
         return df
