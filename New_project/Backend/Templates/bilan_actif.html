@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+
+@page {
+    size: A4 portrait;
+    margin: 12mm 18mm 18mm 18mm;
+
+    @top-center {
+        content: "{{ nom_fond }} - Comptes annuels au {{ date_cloture }}";
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+    @bottom-left {
+        content: "";
+        /* Le logo est injecté via une image positionnée dans le body,
+           car WeasyPrint ne supporte pas les images dans @page.
+           Cette zone est réservée côté gauche. */
+    }
+    @bottom-right {
+        content: "Page " counter(page) " sur " counter(pages);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { }
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9.5pt;
+    color: #000;
+}
+
+/* ── Conteneur principal ── */
+.page-content {
+    display: inline-block;
+    width: 100%;
+    border: 0.5pt solid #000;
+    margin-top: 3mm;
+}
+
+/* ── Header du tableau ── */
+.table-header {
+    display: table;
+    width: 100%;
+    border-bottom: 0.5pt solid #000;
+    flex-shrink: 0;
+    table-layout: fixed;
+}
+.table-header .col-label {
+    display: table-cell;
+    width: 65%;
+    padding: 4pt 6pt;
+    font-weight: bold;
+    font-size: 11pt;
+    border-right: 0.5pt solid #000;
+    vertical-align: middle;
+}
+.table-header .col-n,
+.table-header .col-n1 {
+    display: table-cell;
+    width: 17.4%;
+    padding: 4pt 4pt;
+    font-weight: bold;
+    font-size: 9.5pt;
+    text-align: center;
+    vertical-align: middle;
+}
+.table-header .col-n { border-right: 0.5pt solid #000; }
+
+/* ── Tableau ── */
+.bilan-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    flex-shrink: 0;
+}
+.bilan-table col.col-label { width: 65%; }
+.bilan-table col.col-n     { width: 17.5%; }
+.bilan-table col.col-n1    { width: 17.5%; }
+
+/* Cellule de base : PAS de bordure horizontale par défaut */
+.bilan-table td {
+    padding: 0 4pt;
+    border-right: 0.5pt solid #000;
+    height: 15pt;
+    vertical-align: middle;
+    font-size: 9.5pt;
+}
+.bilan-table td:last-child { border-right: none; }
+
+.bilan-table td.col-n,
+.bilan-table td.col-n1 {
+    text-align: right;
+    padding-right: 6pt;
+}
+
+/* ── Hauteurs spécifiques ── */
+
+/* IMMOBILISATIONS : première ligne, un peu plus haute */
+.bilan-table tr.h-immo td  { height: 35pt; }
+
+/* TITRES FINANCIERS */
+.bilan-table tr.h-titres td { height: 25pt; }
+
+/* l1 (Actions, Obligations…) : 30pt */
+.bilan-table tr.l1 td       { height: 30pt; }
+
+/* l2 (Négociées / Non négociées) : 15pt */
+.bilan-table tr.l2 td       { height: 15pt; }
+
+/* F, G, H, I, J isolés : 30pt */
+.bilan-table tr.h-30 td     { height: 30pt; }
+
+/* Sous-totaux + CREANCES + COMPTES FINANCIERS : 30pt */
+.bilan-table tr.h-sous td   { height: 30pt; }
+
+/* TOTAL ACTIF : 15pt (géré par bordures) */
+.bilan-table tr.total td    { height: 15pt; }
+
+/* ── Styles typographiques ── */
+
+/* l0 : section bold */
+.bilan-table tr.l0 td.col-label { font-weight: bold; padding-left: 4pt; }
+.bilan-table tr.l0 td.col-n,
+.bilan-table tr.l0 td.col-n1   { font-weight: bold; }
+
+/* l1 : italique, indent */
+.bilan-table tr.l1 td.col-label { font-style: italic; padding-left: 20pt; }
+
+/* l2 : indent fort */
+.bilan-table tr.l2 td.col-label { padding-left: 36pt; }
+
+/* sous-total : bold */
+.bilan-table tr.sous-total td.col-label { font-weight: bold; padding-left: 4pt; }
+.bilan-table tr.sous-total td.col-n,
+.bilan-table tr.sous-total td.col-n1   { font-weight: bold; }
+
+/* total final : bold + bordures épaisses haut et bas */
+.bilan-table tr.total td {
+    font-weight: bold;
+    font-size: 10pt;
+    padding-left: 4pt;
+    border-top: 0.75pt solid #000;
+    border-bottom: 0.75pt solid #000;
+}
+
+/* ── Séparateurs (utilisés uniquement là où l'original en a) ── */
+
+/* Bordure fine basse — uniquement sur IMMOBILISATIONS */
+.bilan-table tr.sep-after td       { border-bottom: 0.5pt solid #000; }
+
+/* Bordures épaisses — sous-total éligibles I et sous-total II */
+.bilan-table tr.sep-thick-after td  { border-bottom: 0.75pt solid #000; }
+.bilan-table tr.sep-thick-before td { border-top:    0.75pt solid #000; }
+
+/* ── Note bas de tableau ── */
+.note {
+    font-size: 7.5pt;
+    font-style: italic;
+    margin-top: 2pt;
+    flex-shrink: 0;
+}
+
+/* ── Footer logo ── */
+.footer-logo {
+    position: fixed;
+    bottom: -12mm;
+    left: 0mm;   /* même marge que le body */
+    height: 8mm;
+    width: auto;
+}
+
+</style>
+</head>
+<body>
+
+{% if logo_url %}
+<img class="footer-logo" src="{{ logo_url }}" alt="Logo">
+{% endif %}
+
+<div class="page-content">
+
+    <!-- Header titre + colonnes -->
+    <div class="table-header">
+        <div class="col-label">
+            Bilan Actif au {{ date_cloture }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;en euros
+        </div>
+        <div class="col-n">Exercice N</div>
+        {% if has_n1 %}<div class="col-n1">Exercice N-1</div>{% endif %}
+    </div>
+
+    <!-- Lignes du tableau -->
+    <table class="bilan-table">
+        <colgroup>
+            <col class="col-label">
+            <col class="col-n">
+            {% if has_n1 %}<col class="col-n1">{% endif %}
+        </colgroup>
+        <tbody>
+
+        {# IMMOBILISATIONS — hauteur 35pt + bordure fine basse #}
+        <tr class="l0 h-immo sep-after">
+            <td class="col-label">IMMOBILISATIONS CORPORELLES NETTES</td>
+            <td class="col-n">{{ fmt(actif_n.immobilisations_corporelles_nettes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.immobilisations_corporelles_nettes) }}</td>{% endif %}
+        </tr>
+
+        {# TITRES FINANCIERS — hauteur 25pt, sans bordure horizontale #}
+        <tr class="l0 h-titres">
+            <td class="col-label">TITRES FINANCIERS</td>
+            <td class="col-n">{{ fmt(actif_n.titres_financiers) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.titres_financiers) }}</td>{% endif %}
+        </tr>
+
+        {# Actions (A) — l1 = 30pt #}
+        <tr class="l1">
+            <td class="col-label">Actions et valeurs assimilées (A) <sup>(1)</sup></td>
+            <td class="col-n">{{ fmt(actif_n.actions.total) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.actions.total) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Négociées sur un marché réglementé ou assimilé</td>
+            <td class="col-n">{{ fmt(actif_n.actions.cotees) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.actions.cotees) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Non négociées sur un marché réglementé ou assimilé</td>
+            <td class="col-n">{{ fmt(actif_n.actions.non_cotees) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.actions.non_cotees) }}</td>{% endif %}
+        </tr>
+
+        {# Obligations convertibles (B) #}
+        <tr class="l1">
+            <td class="col-label">Obligations convertibles en actions (B) <sup>(1)</sup></td>
+            <td class="col-n">{{ fmt(actif_n.obligations_convertibles.total) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.obligations_convertibles.total) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Négociées sur un marché réglementé ou assimilé</td>
+            <td class="col-n">{{ fmt(actif_n.obligations_convertibles.cotees) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.obligations_convertibles.cotees) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Non négociées sur un marché réglementé ou assimilé</td>
+            <td class="col-n">{{ fmt(actif_n.obligations_convertibles.non_cotees) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.obligations_convertibles.non_cotees) }}</td>{% endif %}
+        </tr>
+
+        {# Obligations (C) #}
+        <tr class="l1">
+            <td class="col-label">Obligations et valeurs assimilées (C) <sup>(1)</sup></td>
+            <td class="col-n">{{ fmt(actif_n.autres_obligations.total) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.autres_obligations.total) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Négociées sur un marché réglementé ou assimilé</td>
+            <td class="col-n">{{ fmt(actif_n.autres_obligations.cotees) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.autres_obligations.cotees) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Non négociées sur un marché réglementé ou assimilé</td>
+            <td class="col-n">{{ fmt(actif_n.autres_obligations.non_cotees) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.autres_obligations.non_cotees) }}</td>{% endif %}
+        </tr>
+
+        {# Titres de créances (D) #}
+        <tr class="l1">
+            <td class="col-label">Titres de créances (D)</td>
+            <td class="col-n">{{ fmt(actif_n.titres_creances.total) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.titres_creances.total) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Négociés sur un marché réglementé ou assimilé</td>
+            <td class="col-n">{{ fmt(actif_n.titres_creances.cotes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.titres_creances.cotes) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Non négociés sur un marché réglementé ou assimilé</td>
+            <td class="col-n">{{ fmt(actif_n.titres_creances.non_cotes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.titres_creances.non_cotes) }}</td>{% endif %}
+        </tr>
+
+        {# Parts d'OPC (E) #}
+        <tr class="l1">
+            <td class="col-label">Parts d'OPC et de fonds d'investissements (E)</td>
+            <td class="col-n">{{ fmt(actif_n.parts_opc.total) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.parts_opc.total) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- OPCVM</td>
+            <td class="col-n">{{ fmt(actif_n.parts_opc.opcvm) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.parts_opc.opcvm) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- FIA et équivalents d'autres Etats membres de l'UE</td>
+            <td class="col-n">{{ fmt(actif_n.parts_opc.fia) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.parts_opc.fia) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">- Autres OPC et fonds d'investissement</td>
+            <td class="col-n">{{ fmt(actif_n.parts_opc.autres) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.parts_opc.autres) }}</td>{% endif %}
+        </tr>
+
+        {# Dépôts (F) #}
+        <tr class="l1 h-30">
+            <td class="col-label">Dépôts (F)</td>
+            <td class="col-n">{{ fmt(actif_n.depots) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.depots) }}</td>{% endif %}
+        </tr>
+
+        {# IFT (G) #}
+        <tr class="l1 h-30">
+            <td class="col-label">Instruments financiers à terme (G)</td>
+            <td class="col-n">{{ fmt(actif_n.instruments_financiers_terme) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.instruments_financiers_terme) }}</td>{% endif %}
+        </tr>
+
+        {# Opérations temporaires (H) #}
+        <tr class="l1 h-30">
+            <td class="col-label">Opérations temporaires sur titres (H)</td>
+            <td class="col-n">{{ fmt(actif_n.operations_temporaires_titres) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.operations_temporaires_titres) }}</td>{% endif %}
+        </tr>
+
+        {# Prêts (I) #}
+        <tr class="l1 h-30">
+            <td class="col-label">Prêts (I)</td>
+            <td class="col-n">{{ fmt(actif_n.prets) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.prets) }}</td>{% endif %}
+        </tr>
+
+        {# Autres actifs éligibles (J) #}
+        <tr class="l1 h-30">
+            <td class="col-label">Autres actifs éligibles (J)</td>
+            <td class="col-n">{{ fmt(actif_n.autres_actifs_eligibles) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.autres_actifs_eligibles) }}</td>{% endif %}
+        </tr>
+
+        {# Sous-total éligibles I — bordures épaisses haut et bas #}
+        <tr class="sous-total h-sous sep-thick-before">
+            <td class="col-label">Sous-total actifs éligibles I = (A + B + C + D + E + F + G + H + I + J)</td>
+            <td class="col-n">{{ fmt(actif_n.sous_total_actifs_eligibles_I) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.sous_total_actifs_eligibles_I) }}</td>{% endif %}
+        </tr>
+
+        {# CREANCES #}
+        <tr class="l0 h-sous">
+            <td class="col-label">CREANCES ET COMPTES D'AJUSTEMENT ACTIFS</td>
+            <td class="col-n">{{ fmt(actif_n.creances_et_comptes_ajustement) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.creances_et_comptes_ajustement) }}</td>{% endif %}
+        </tr>
+
+        {# COMPTES FINANCIERS #}
+        <tr class="l0 h-sous">
+            <td class="col-label">COMPTES FINANCIERS</td>
+            <td class="col-n">{{ fmt(actif_n.comptes_financiers) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.comptes_financiers) }}</td>{% endif %}
+        </tr>
+
+        {# Sous-total autres II — bordure épaisse basse #}
+        <tr class="sous-total h-sous sep-thick-after sep-thick-before">
+            <td class="col-label">Sous-total actifs autres que les actifs éligibles II</td>
+            <td class="col-n">{{ fmt(actif_n.sous_total_actifs_autres_II) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.sous_total_actifs_autres_II) }}</td>{% endif %}
+        </tr>
+
+        {# TOTAL ACTIF — bordures épaisses haut et bas #}
+        <tr class="total">
+            <td class="col-label">TOTAL ACTIF I + II</td>
+            <td class="col-n">{{ fmt(actif_n.total_actif) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(actif_n1.total_actif) }}</td>{% endif %}
+        </tr>
+
+        </tbody>
+    </table>
+
+
+</div>
+
+<p class="note">
+    (1) Les autres actifs sont les actifs autres que les actifs éligibles tels que définis
+    par le règlement ou les statuts de l'OPC à capital variable qui sont nécessaires à leur fonctionnement.
+</p>
+
+</body>
+</html>

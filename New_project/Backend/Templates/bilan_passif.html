@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+
+@page {
+    size: A4 portrait;
+    margin: 12mm 18mm 18mm 18mm;
+    @top-center {
+        content: "{{ nom_fond }} - Comptes annuels au {{ date_cloture }}";
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+    @bottom-right {
+        content: "Page " counter(page) " sur " counter(pages);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { }
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9.5pt;
+    color: #000;
+}
+
+/* ── Conteneur principal ── */
+.page-content {
+    display: inline-block;
+    width: 100%;
+    border: 0.5pt solid #000;
+    margin-top: 3mm;
+}
+
+/* ── Header ── */
+.table-header {
+    display: table;
+    width: 100%;
+    border-bottom: 0.5pt solid #000;
+    flex-shrink: 0;
+    table-layout: fixed;
+}
+.table-header .col-label {
+    display: table-cell;
+    width: 65%;
+    padding: 4pt 6pt;
+    font-weight: bold;
+    font-size: 11pt;
+    border-right: 0.5pt solid #000;
+    vertical-align: middle;
+}
+.table-header .col-n,
+.table-header .col-n1 {
+    display: table-cell;
+    width: 17.4%;
+    padding: 4pt 4pt;
+    font-weight: bold;
+    font-size: 9.5pt;
+    text-align: center;
+    vertical-align: middle;
+}
+.table-header .col-n { border-right: 0.5pt solid #000; }
+
+/* ── Tableau ── */
+.bilan-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    flex-shrink: 0;
+}
+.bilan-table col.col-label { width: 65%; }
+.bilan-table col.col-n     { width: 17.5%; }
+.bilan-table col.col-n1    { width: 17.5%; }
+
+/* Cellule de base — PAS de bordure horizontale par défaut */
+.bilan-table td {
+    padding: 0 4pt;
+    border-right: 0.5pt solid #000;
+    height: 15pt;
+    vertical-align: middle;
+    font-size: 9.5pt;
+}
+.bilan-table td:last-child { border-right: none; }
+
+.bilan-table td.col-n,
+.bilan-table td.col-n1 {
+    text-align: right;
+    padding-right: 6pt;
+}
+
+/* ── Hauteurs calibrées sur l'original ── */
+
+/* CAPITAUX PROPRES (section header) : 24pt */
+.bilan-table tr.h-cap td      { height: 24pt; }
+
+/* l1 (Capital, Reports, Instruments…) : 30pt */
+.bilan-table tr.l1 td         { height: 30pt; }
+
+/* l2 (Opérations de cession, temporaires) : 15pt */
+.bilan-table tr.l2 td         { height: 15pt; }
+
+/* CAPITAUX PROPRES I — sous-total avec grande hauteur : 30pt
+   (les bordures épaisses autour ajoutent visuellement ~7pt) */
+.bilan-table tr.h-cpI td      { height: 30pt; }
+
+/* l0 standalone (PASSIFS DE FINANCEMENT, CAPITAUX PROPRES ET…,
+   PASSIFS ELIGIBLES, AUTRES PASSIFS) : 30pt */
+.bilan-table tr.h-30 td       { height: 30pt; }
+
+/* Sous-totaux (SOUS-TOTAL PASSIFS ELIGIBLES III, SOUS-TOTAL AUTRES PASSIFS IV) : 30pt */
+.bilan-table tr.h-sous td     { height: 30pt; }
+
+/* TOTAL PASSIF : 15pt (avec bordures épaisses haut/bas) */
+.bilan-table tr.total td      { height: 15pt; }
+
+/* ── Typographie ── */
+
+/* l0 : bold */
+.bilan-table tr.l0 td.col-label { font-weight: bold; padding-left: 4pt; }
+.bilan-table tr.l0 td.col-n,
+.bilan-table tr.l0 td.col-n1   { font-weight: bold; }
+
+/* l1 : italique + indent 20pt */
+.bilan-table tr.l1 td.col-label { font-style: italic; padding-left: 20pt; }
+
+/* l2 : indent 36pt */
+.bilan-table tr.l2 td.col-label { padding-left: 36pt; }
+
+/* sous-total : bold */
+.bilan-table tr.sous-total td.col-label { font-weight: bold; padding-left: 4pt; }
+.bilan-table tr.sous-total td.col-n,
+.bilan-table tr.sous-total td.col-n1   { font-weight: bold; }
+
+/* total final */
+.bilan-table tr.total td {
+    font-weight: bold;
+    font-size: 10pt;
+    padding-left: 4pt;
+    border-top: 0.75pt solid #000;
+    border-bottom: 0.75pt solid #000;
+}
+
+/* ── Séparateurs (uniquement là où l'original en a) ── */
+
+/* Bordure fine basse — après CAPITAUX PROPRES (header) */
+/* .bilan-table tr.sep-after td        { border-bottom: 0.5pt solid #000; } */
+
+/* Bordures épaisses */
+.bilan-table tr.sep-thick-after td  { border-bottom: 0.75pt solid #000; }
+.bilan-table tr.sep-thick-before td { border-top:    0.75pt solid #000; }
+
+/* ── Footer logo ── */
+.footer-logo {
+    position: fixed;
+    bottom: -12mm;
+    left: 0mm;   /* même marge que le body */
+    height: 8mm;
+    width: auto;
+}
+
+</style>
+</head>
+<body>
+
+{% if logo_url %}
+<img class="footer-logo" src="{{ logo_url }}" alt="Logo">
+{% endif %}
+
+<div class="page-content">
+
+    <div class="table-header">
+        <div class="col-label">
+            Bilan Passif au {{ date_cloture }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;en euros
+        </div>
+        <div class="col-n">Exercice N</div>
+        {% if has_n1 %}<div class="col-n1">Exercice N-1</div>{% endif %}
+    </div>
+
+    <table class="bilan-table">
+        <colgroup>
+            <col class="col-label">
+            <col class="col-n">
+            {% if has_n1 %}<col class="col-n1">{% endif %}
+        </colgroup>
+        <tbody>
+
+        {# ── CAPITAUX PROPRES — header 24pt + bordure fine basse ── #}
+        <tr class="l0 h-cap sep-after">
+            <td class="col-label">CAPITAUX PROPRES</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+
+        {# l1 = 30pt chacune, sans bordure horizontale #}
+        <tr class="l1">
+            <td class="col-label">Capital</td>
+            <td class="col-n">{{ fmt(passif_n.capital) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.capital) }}</td>{% endif %}
+        </tr>
+        <tr class="l1">
+            <td class="col-label">Report à nouveau sur revenu net</td>
+            <td class="col-n">{{ fmt(passif_n.report_a_nouveau_revenu_net) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.report_a_nouveau_revenu_net) }}</td>{% endif %}
+        </tr>
+        <tr class="l1">
+            <td class="col-label">Report à nouveau des plus et moins-values latentes nettes</td>
+            <td class="col-n">{{ fmt(passif_n.report_a_nouveau_pvmv_latentes_nettes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.report_a_nouveau_pvmv_latentes_nettes) }}</td>{% endif %}
+        </tr>
+        <tr class="l1">
+            <td class="col-label">Report à nouveau des plus et moins-values réalisées nettes</td>
+            <td class="col-n">{{ fmt(passif_n.report_a_nouveau_pvmv_realisees_nettes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.report_a_nouveau_pvmv_realisees_nettes) }}</td>{% endif %}
+        </tr>
+        <tr class="l1">
+            <td class="col-label">Résultat net de l'exercice</td>
+            <td class="col-n">{{ fmt(passif_n.resultat_net_exercice) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.resultat_net_exercice) }}</td>{% endif %}
+        </tr>
+
+        {# CAPITAUX PROPRES I — bordures épaisses haut et bas, hauteur 30pt #}
+        <tr class="sous-total h-cpI sep-thick-before">
+            <td class="col-label">CAPITAUX PROPRES I</td>
+            <td class="col-n">{{ fmt(passif_n.capitaux_propres_I) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.capitaux_propres_I) }}</td>{% endif %}
+        </tr>
+
+        {# PASSIFS DE FINANCEMENT II — l0 standalone 30pt #}
+        <tr class="l0 h-30 sep-thick-after">
+            <td class="col-label">PASSIFS DE FINANCEMENT II</td>
+            <td class="col-n">{{ fmt(passif_n.passifs_financement_II) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.passifs_financement_II) }}</td>{% endif %}
+        </tr>
+
+        {# CAPITAUX PROPRES ET PASSIFS — sous-total 30pt + bordures épaisses #}
+        <tr class="sous-total h-30 ">
+            <td class="col-label">CAPITAUX PROPRES ET PASSIFS DE FINANCEMENT (I+II)</td>
+            <td class="col-n">{{ fmt(passif_n.capitaux_propres_et_passifs_financement) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.capitaux_propres_et_passifs_financement) }}</td>{% endif %}
+        </tr>
+
+        {# ── PASSIFS ELIGIBLES ── #}
+        <tr class="l0 h-30">
+            <td class="col-label">PASSIFS ELIGIBLES</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+
+        {# Instruments financiers (A) : l1 30pt + ses 2 sous-lignes l2 15pt #}
+        <tr class="l1">
+            <td class="col-label">Instruments financiers (A)</td>
+            <td class="col-n">{{ fmt(passif_n.passifs_eligibles.instruments_financiers_A) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.passifs_eligibles.instruments_financiers_A) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Opérations de cession sur instruments financiers</td>
+            <td class="col-n">-</td>
+            {% if has_n1 %}<td class="col-n1">-</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Opérations temporaires sur titres financiers</td>
+            <td class="col-n">-</td>
+            {% if has_n1 %}<td class="col-n1">-</td>{% endif %}
+        </tr>
+
+        <tr class="l1">
+            <td class="col-label">Instruments financiers à terme (B)</td>
+            <td class="col-n">{{ fmt(passif_n.passifs_eligibles.instruments_financiers_terme_B) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.passifs_eligibles.instruments_financiers_terme_B) }}</td>{% endif %}
+        </tr>
+        <tr class="l1">
+            <td class="col-label">Emprunts (C)</td>
+            <td class="col-n">{{ fmt(passif_n.passifs_eligibles.emprunts_C) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.passifs_eligibles.emprunts_C) }}</td>{% endif %}
+        </tr>
+        <tr class="l1">
+            <td class="col-label">Autres passifs éligibles (D)</td>
+            <td class="col-n">{{ fmt(passif_n.passifs_eligibles.autres_passifs_eligibles_D) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.passifs_eligibles.autres_passifs_eligibles_D) }}</td>{% endif %}
+        </tr>
+
+        {# SOUS-TOTAL PASSIFS ELIGIBLES III — bordures épaisses #}
+        <tr class="sous-total h-sous sep-thick-before sep-thick-after">
+            <td class="col-label">SOUS-TOTAL PASSIFS ELIGIBLES III = A + B + C + D</td>
+            <td class="col-n">{{ fmt(passif_n.passifs_eligibles.sous_total_III) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.passifs_eligibles.sous_total_III) }}</td>{% endif %}
+        </tr>
+
+        {# ── AUTRES PASSIFS ── #}
+        <tr class="l0 h-30">
+            <td class="col-label">AUTRES PASSIFS</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+
+        <tr class="l1">
+            <td class="col-label">Dettes et comptes d'ajustement passifs</td>
+            <td class="col-n">{{ fmt(passif_n.autres_passifs.dettes_et_comptes_ajustement) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.autres_passifs.dettes_et_comptes_ajustement) }}</td>{% endif %}
+        </tr>
+        <tr class="l1">
+            <td class="col-label">Concours bancaires</td>
+            <td class="col-n">{{ fmt(passif_n.autres_passifs.concours_bancaires) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.autres_passifs.concours_bancaires) }}</td>{% endif %}
+        </tr>
+
+        {# SOUS-TOTAL AUTRES PASSIFS IV — bordures épaisses #}
+        <tr class="sous-total h-sous sep-thick-before sep-thick-after">
+            <td class="col-label">SOUS-TOTAL AUTRES PASSIFS IV</td>
+            <td class="col-n">{{ fmt(passif_n.autres_passifs.sous_total_IV) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.autres_passifs.sous_total_IV) }}</td>{% endif %}
+        </tr>
+
+        {# TOTAL PASSIF — bordures épaisses haut et bas #}
+        <tr class="total">
+            <td class="col-label">TOTAL PASSIFS : I + II + III + IV</td>
+            <td class="col-n">{{ fmt(passif_n.total_passif) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(passif_n1.total_passif) }}</td>{% endif %}
+        </tr>
+
+        </tbody>
+    </table>
+
+
+</div>
+
+</body>
+</html>

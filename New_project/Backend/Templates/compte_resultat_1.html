@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+
+@page {
+    size: A4 portrait;
+    margin: 12mm 18mm 18mm 18mm;
+
+    @top-center {
+        content: "{{ nom_fond }} - Comptes annuels au {{ date_cloture }}";
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+    @bottom-left {
+        content: "";
+        /* Le logo est injecté via une image positionnée dans le body,
+           car WeasyPrint ne supporte pas les images dans @page.
+           Cette zone est réservée côté gauche. */
+    }
+    @bottom-right {
+        content: "Page " counter(page) " sur " counter(pages);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { }
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9.5pt;
+    color: #000;
+}
+
+/* ── Conteneur principal ── */
+.page-content {
+    display: inline-block;
+    width: 100%;
+    border: 0.5pt solid #000;
+    margin-top: 3mm;
+}
+
+/* ── Header du tableau ── */
+.table-header {
+    display: table;
+    width: 100%;
+    border-bottom: 0.5pt solid #000;
+    flex-shrink: 0;
+    table-layout: fixed;
+}
+.table-header .col-label {
+    display: table-cell;
+    width: 65%;
+    padding: 4pt 6pt;
+    font-weight: bold;
+    font-size: 11pt;
+    border-right: 0.5pt solid #000;
+    vertical-align: middle;
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+.table-header .col-n,
+.table-header .col-n1 {
+    display: table-cell;
+    width: 17.4%;
+    padding: 12pt 7pt;
+    font-weight: bold;
+    font-size: 9.5pt;
+    text-align: center;
+    vertical-align: middle;
+}
+.table-header .col-n { border-right: 0.5pt solid #000; margin: 0pt 4pt;}
+
+/* ── Tableau ── */
+.cr-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    flex-shrink: 0;
+}
+.cr-table col.col-label { width: 65%; padding: 0pt 4pt;}
+.cr-table col.col-n     { width: 17.5%; padding: 0pt 4pt;}
+.cr-table col.col-n1    { width: 17.5%; padding: 0pt 4pt;}
+
+/* Cellule de base : PAS de bordure horizontale par défaut */
+.cr-table td {
+    padding: 0 8pt;
+    border-right: 0.5pt solid #000000;
+    height: 15pt;
+    vertical-align: middle;
+    font-size: 9.5pt;
+}
+.cr-table td:last-child { border-right: none; }
+
+.cr-table td.col-n,
+.cr-table td.col-n1 {
+    text-align: right;
+    padding-right: 6pt;
+}
+
+
+/* ── Hauteurs spécifiques ── */
+
+/* IMMOBILISATIONS : première ligne, un peu plus haute */
+.cr-table tr.h-immo td  { height: 35pt; }
+
+/* TITRES FINANCIERS */
+.cr-table tr.h-titres td { height: 25pt; }
+
+/* l1 (Actions, Obligations…) : 30pt */
+.cr-table tr.l1 td       { height: 30pt; }
+
+/* l2 (Négociées / Non négociées) : 15pt */
+.cr-table tr.l2 td       { height: 15pt; }
+
+/* F, G, H, I, J isolés : 30pt */
+.cr-table tr.h-30 td     { height: 30pt; }
+
+/* Sous-totaux + CREANCES + COMPTES FINANCIERS : 30pt */
+.cr-table tr.h-sous td   { height: 30pt; }
+
+/* TOTAL ACTIF : 15pt (géré par bordures) */
+.cr-table tr.total td    { height: 15pt; }
+
+/* ── Styles typographiques ── */
+
+/* l0 : section bold */
+.cr-table tr.l0 td.col-label { font-weight: bold; padding-left: 4pt; }
+.cr-table tr.l0 td.col-n,
+.cr-table tr.l0 td.col-n1   { font-weight: bold; }
+
+/* l1 : italique, indent */
+.cr-table tr.l1 td.col-label { font-style: italic; padding-left: 20pt; }
+
+/* l2 : indent fort */
+.cr-table tr.l2 td.col-label { padding-left: 36pt; }
+
+/* sous-total : bold */
+.cr-table tr.sous-total td.col-label { font-weight: bold; padding-left: 4pt; }
+.cr-table tr.sous-total td.col-n,
+.cr-table tr.sous-total td.col-n1   { font-weight: bold; }
+
+/* total final : bold + bordures épaisses haut et bas */
+.cr-table tr.total td {
+    font-weight: bold;
+    font-size: 10pt;
+    padding-left: 4pt;
+    border-top: 0.75pt solid #000;
+    border-bottom: 0.75pt solid #000;
+}
+
+/* ── Séparateurs (utilisés uniquement là où l'original en a) ── */
+
+/* Bordure fine basse — uniquement sur IMMOBILISATIONS */
+.cr-table tr.sep-after td       { border-bottom: 0.5pt solid #000; }
+
+/* Bordures épaisses — sous-total éligibles I et sous-total II */
+.cr-table tr.sep-thick-after td  { border-bottom: 0.75pt solid #000; }
+.cr-table tr.sep-thick-before td { border-top:    0.75pt solid #000; }
+
+/* ── Note bas de tableau ── */
+.note {
+    font-size: 7.5pt;
+    font-style: italic;
+    margin-top: 2pt;
+    flex-shrink: 0;
+}
+
+/* ── Footer logo ── */
+.footer-logo {
+    position: fixed;
+    bottom: -12mm;
+    left: 0mm;   /* même marge que le body */
+    height: 8mm;
+    width: auto;
+}
+
+</style>
+</head>
+<body>
+{% if logo_url %}
+<img class="footer-logo" src="{{ logo_url }}" alt="Logo">
+{% endif %}
+<div class="page-content">
+
+    <div class="table-header">
+        <div class="col-label">
+            Compte de résultat au {{ date_cloture }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;en euros
+        </div>
+        <div class="col-n">Exercice N</div>
+        {% if has_n1 %}<div class="col-n1">Exercice N-1</div>{% endif %}
+    </div>
+
+    <table class="cr-table">
+        <colgroup>
+            <col class="col-label">
+            <col class="col-n">
+            {% if has_n1 %}<col class="col-n1">{% endif %}
+        </colgroup>
+        <tbody>
+
+        {# ── Revenus financiers nets ─────────────────────────────────── #}
+        <tr class="section">
+            <td class="col-label">Revenus financiers nets</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+
+        {# Produits sur opérations financières #}
+        <tr class="subsection sep-top">
+            <td class="col-label">Produits sur opérations financières</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Produits sur actions</td>
+            <td class="col-n">{{ fmt(cr1_n.produits_sur_actions) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.produits_sur_actions) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Produits sur obligations</td>
+            <td class="col-n">{{ fmt(cr1_n.produits_sur_obligations) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.produits_sur_obligations) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Produits sur titres de créance</td>
+            <td class="col-n">{{ fmt(cr1_n.produits_sur_titres_de_creance) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.produits_sur_titres_de_creance) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Produits sur des parts d'OPC</td>
+            <td class="col-n">{{ fmt(cr1_n.produits_sur_parts_opc) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.produits_sur_parts_opc) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Produits sur instruments financiers à terme</td>
+            <td class="col-n">{{ fmt(cr1_n.produits_sur_ift) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.produits_sur_ift) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Produits sur opérations temporaires sur titres</td>
+            <td class="col-n">{{ fmt(cr1_n.produits_sur_op_temporaires) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.produits_sur_op_temporaires) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Produits sur prêts et créances</td>
+            <td class="col-n">{{ fmt(cr1_n.produits_sur_prets_creances) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.produits_sur_prets_creances) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Produits sur autres actifs et passifs éligibles</td>
+            <td class="col-n">{{ fmt(cr1_n.produits_sur_autres_actifs_eligibles) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.produits_sur_autres_actifs_eligibles) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Autres produits financiers</td>
+            <td class="col-n">{{ fmt(cr1_n.autres_produits_financiers) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.autres_produits_financiers) }}</td>{% endif %}
+        </tr>
+        <tr class="sous-total sep-after">
+            <td class="col-label titlep4">Sous-total Produits sur opérations financières</td>
+            <td class="col-n">{{ fmt(cr1_n.sous_total_produits_op_financieres) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.sous_total_produits_op_financieres) }}</td>{% endif %}
+        </tr>
+
+        {# Charges sur opérations financières #}
+        <tr class="subsection">
+            <td class="col-label">Charges sur opérations financières</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Charges sur opérations financières</td>
+            <td class="col-n">{{ fmt(cr1_n.charges_sur_op_financieres) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.charges_sur_op_financieres) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Charges sur instruments financiers à terme</td>
+            <td class="col-n">{{ fmt(cr1_n.charges_sur_ift) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.charges_sur_ift) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Charges sur opérations temporaires sur titres</td>
+            <td class="col-n">{{ fmt(cr1_n.charges_sur_op_temporaires) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.charges_sur_op_temporaires) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Charges sur emprunts</td>
+            <td class="col-n">{{ fmt(cr1_n.charges_sur_emprunts) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.charges_sur_emprunts) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Charges sur autres actifs et passifs éligibles</td>
+            <td class="col-n">{{ fmt(cr1_n.charges_sur_autres_actifs_eligibles) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.charges_sur_autres_actifs_eligibles) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Charges sur passifs de financement</td>
+            <td class="col-n">{{ fmt(cr1_n.charges_sur_passifs_financement) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.charges_sur_passifs_financement) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Autres charges financières</td>
+            <td class="col-n">{{ fmt(cr1_n.autres_charges_financieres) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.autres_charges_financieres) }}</td>{% endif %}
+        </tr>
+        <tr class="sous-total sep-after">
+            <td class="col-label">Sous-total Charges sur opérations financières</td>
+            <td class="col-n">{{ fmt(cr1_n.sous_total_charges_op_financieres) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.sous_total_charges_op_financieres) }}</td>{% endif %}
+        </tr>
+
+        {# Total A #}
+        <tr class="total sep-after">
+            <td class="col-label">Total Revenus financiers nets (A)</td>
+            <td class="col-n">{{ fmt(cr1_n.total_revenus_financiers_nets_A) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.total_revenus_financiers_nets_A) }}</td>{% endif %}
+        </tr>
+
+        {# Autres produits #}
+        <tr class="subsection">
+            <td class="col-label">Autres produits</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Frais pris en charge par l'entreprise <sup>(1)</sup></td>
+            <td class="col-n">{{ fmt(cr1_n.frais_pris_en_charge_entreprise) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.frais_pris_en_charge_entreprise) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Rétrocession des frais de gestion au bénéfice de l'OPC</td>
+            <td class="col-n">{{ fmt(cr1_n.retrocession_frais_gestion) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.retrocession_frais_gestion) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Versements en garantie de capital ou de performance</td>
+            <td class="col-n">{{ fmt(cr1_n.versements_garantie_capital) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.versements_garantie_capital) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Autres produits</td>
+            <td class="col-n">{{ fmt(cr1_n.autres_produits) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.autres_produits) }}</td>{% endif %}
+        </tr>
+
+        {# Autres charges #}
+        <tr class="subsection">
+            <td class="col-label">Autres charges</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Frais de gestion de la société de gestion</td>
+            <td class="col-n">{{ fmt(cr1_n.frais_gestion_societe_gestion) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.frais_gestion_societe_gestion) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Frais d'audit, d'études des fonds de capital investissement</td>
+            <td class="col-n">{{ fmt(cr1_n.frais_audit_etudes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.frais_audit_etudes) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Impôts et taxes</td>
+            <td class="col-n">{{ fmt(cr1_n.impots_taxes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.impots_taxes) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Autres charges</td>
+            <td class="col-n">{{ fmt(cr1_n.autres_charges) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.autres_charges) }}</td>{% endif %}
+        </tr>
+
+        {# Sous-totaux et totaux ── #}
+        <tr class="total sep-thick">
+            <td class="col-label">Sous-total Autres produits et Autres charges (B)</td>
+            <td class="col-n">{{ fmt(cr1_n.sous_total_autres_produits_charges_B) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.sous_total_autres_produits_charges_B) }}</td>{% endif %}
+        </tr>
+        <tr class="total sep-after">
+            <td class="col-label">Sous-total Revenus nets avant comptes de régularisation (C) = (A) - (B)</td>
+            <td class="col-n">{{ fmt(cr1_n.sous_total_revenus_nets_avant_regul_C) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.sous_total_revenus_nets_avant_regul_C) }}</td>{% endif %}
+        </tr>
+        <tr class="l2 sep-after">
+            <td class="col-label">Régularisation des revenus nets de l'exercice (D)</td>
+            <td class="col-n">{{ fmt(cr1_n.regularisation_revenus_nets_D) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.regularisation_revenus_nets_D) }}</td>{% endif %}
+        </tr>
+        <tr class="total sep-thick">
+            <td class="col-label">Sous-total Revenus nets I = (C) + (D)</td>
+            <td class="col-n">{{ fmt(cr1_n.revenus_nets_I) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr1_n1.revenus_nets_I) }}</td>{% endif %}
+        </tr>
+
+        </tbody>
+    </table>
+
+    <div class="filler">
+        <div class="filler-label"></div>
+        <div class="filler-n"></div>
+        {% if has_n1 %}<div class="filler-n1"></div>{% endif %}
+    </div>
+
+</div>
+
+<p class="note">(1) Seulement pour les FCPE</p>
+
+</body>
+</html>

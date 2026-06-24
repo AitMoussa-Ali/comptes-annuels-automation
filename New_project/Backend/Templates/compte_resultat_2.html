@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+
+@page {
+    size: A4 portrait;
+    margin: 12mm 18mm 18mm 18mm;
+
+    @top-center {
+        content: "{{ nom_fond }} - Comptes annuels au {{ date_cloture }}";
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+    @bottom-left {
+        content: "";
+        /* Le logo est injecté via une image positionnée dans le body,
+           car WeasyPrint ne supporte pas les images dans @page.
+           Cette zone est réservée côté gauche. */
+    }
+    @bottom-right {
+        content: "Page " counter(page) " sur " counter(pages);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { }
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9.5pt;
+    color: #000;
+}
+
+/* ── Conteneur principal ── */
+.page-content {
+    display: inline-block;
+    width: 100%;
+    border: 0.5pt solid #000;
+    margin-top: 3mm;
+}
+
+/* ── Header du tableau ── */
+.table-header {
+    display: table;
+    width: 100%;
+    border-bottom: 0.5pt solid #000;
+    flex-shrink: 0;
+    table-layout: fixed;
+}
+.table-header .col-label {
+    display: table-cell;
+    width: 65%;
+    padding: 4pt 6pt;
+    font-weight: bold;
+    font-size: 11pt;
+    border-right: 0.5pt solid #000;
+    vertical-align: middle;
+}
+.table-header .col-n,
+.table-header .col-n1 {
+    display: table-cell;
+    width: 17.4%;
+    padding: 4pt 4pt;
+    font-weight: bold;
+    font-size: 9.5pt;
+    text-align: center;
+    vertical-align: middle;
+}
+.table-header .col-n { border-right: 0.5pt solid #000; }
+
+/* ── Tableau ── */
+.cr-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    flex-shrink: 0;
+}
+.cr-table col.col-label { width: 65%; }
+.cr-table col.col-n     { width: 17.5%; }
+.cr-table col.col-n1    { width: 17.5%; }
+
+/* Cellule de base : PAS de bordure horizontale par défaut */
+.cr-table td {
+    padding: 0 4pt;
+    border-right: 0.5pt solid #000;
+    height: 15pt;
+    vertical-align: middle;
+    font-size: 9.5pt;
+}
+.cr-table td:last-child { border-right: none; }
+
+.cr-table td.col-n,
+.cr-table td.col-n1 {
+    text-align: right;
+    padding-right: 6pt;
+}
+
+/* ── Hauteurs spécifiques ── */
+
+/* IMMOBILISATIONS : première ligne, un peu plus haute */
+.cr-table tr.h-immo td  { height: 35pt; }
+
+/* TITRES FINANCIERS */
+.cr-table tr.h-titres td { height: 25pt; }
+
+/* l1 (Actions, Obligations…) : 30pt */
+.cr-table tr.l1 td       { height: 30pt; }
+
+/* l2 (Négociées / Non négociées) : 15pt */
+.cr-table tr.l2 td       { height: 15pt; }
+
+/* F, G, H, I, J isolés : 30pt */
+.cr-table tr.h-30 td     { height: 30pt; }
+
+/* Sous-totaux + CREANCES + COMPTES FINANCIERS : 30pt */
+.cr-table tr.h-sous td   { height: 30pt; }
+
+/* TOTAL ACTIF : 15pt (géré par bordures) */
+.cr-table tr.total td    { height: 15pt; }
+
+/* ── Styles typographiques ── */
+
+/* l0 : section bold */
+.cr-table tr.l0 td.col-label { font-weight: bold; padding-left: 4pt; }
+.cr-table tr.l0 td.col-n,
+.cr-table tr.l0 td.col-n1   { font-weight: bold; }
+
+/* l1 : italique, indent */
+.cr-table tr.l1 td.col-label { font-style: italic; padding-left: 20pt; }
+
+/* l2 : indent fort */
+.cr-table tr.l2 td.col-label { padding-left: 36pt; }
+
+/* sous-total : bold */
+.cr-table tr.sous-total td.col-label { font-weight: bold; padding-left: 4pt; }
+.cr-table tr.sous-total td.col-n,
+.cr-table tr.sous-total td.col-n1   { font-weight: bold; }
+
+/* total final : bold + bordures épaisses haut et bas */
+.cr-table tr.total td {
+    font-weight: bold;
+    font-size: 10pt;
+    padding-left: 4pt;
+    border-top: 0.75pt solid #000;
+    border-bottom: 0.75pt solid #000;
+}
+
+/* ── Séparateurs (utilisés uniquement là où l'original en a) ── */
+
+/* Bordure fine basse — uniquement sur IMMOBILISATIONS */
+.cr-table tr.sep-after td       { border-bottom: 0.5pt solid #000; }
+
+/* Bordures épaisses — sous-total éligibles I et sous-total II */
+.cr-table tr.sep-thick-after td  { border-bottom: 0.75pt solid #000; }
+.cr-table tr.sep-thick-before td { border-top:    0.75pt solid #000; }
+
+/* ── Note bas de tableau ── */
+.note {
+    font-size: 7.5pt;
+    font-style: italic;
+    margin-top: 2pt;
+    flex-shrink: 0;
+}
+
+/* ── Footer logo ── */
+.footer-logo {
+    position: fixed;
+    bottom: -12mm;
+    left: 0mm;   /* même marge que le body */
+    height: 8mm;
+    width: auto;
+}
+
+</style>
+</head>
+<body>
+
+{% if logo_url %}
+<img class="footer-logo" src="{{ logo_url }}" alt="Logo">
+{% endif %}
+<div class="page-content">
+
+    <div class="table-header">
+        <div class="col-label">
+            Compte de résultat au {{ date_cloture }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;en euros
+        </div>
+        <div class="col-n">Exercice N</div>
+        {% if has_n1 %}<div class="col-n1">Exercice N-1</div>{% endif %}
+    </div>
+
+    <table class="cr-table">
+        <colgroup>
+            <col class="col-label">
+            <col class="col-n">
+            {% if has_n1 %}<col class="col-n1">{% endif %}
+        </colgroup>
+        <tbody>
+
+        {# ── PVMV réalisées ──────────────────────────────────────────── #}
+        <tr class="subsection">
+            <td class="col-label">Plus ou moins-values réalisées nettes avant comptes de régularisation</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Plus et moins-values réalisées</td>
+            <td class="col-n">{{ fmt(cr2_n.plus_moins_values_realisees) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.plus_moins_values_realisees) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Frais de transactions externes et frais de cession</td>
+            <td class="col-n">{{ fmt(cr2_n.frais_transactions_externes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.frais_transactions_externes) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Frais de recherche</td>
+            <td class="col-n">{{ fmt(cr2_n.frais_recherche) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.frais_recherche) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Quote-part des plus-values réalisées réstituées aux assureurs</td>
+            <td class="col-n">{{ fmt(cr2_n.quote_part_pv_realisees_assureurs) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.quote_part_pv_realisees_assureurs) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Indemnités d'assurance perçues</td>
+            <td class="col-n">{{ fmt(cr2_n.indemnites_assurance_percues) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.indemnites_assurance_percues) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Versements en garantie de capital ou performance perçus</td>
+            <td class="col-n">{{ fmt(cr2_n.versements_garantie_capital_perf) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.versements_garantie_capital_perf) }}</td>{% endif %}
+        </tr>
+        <tr class="sous-total sep-after">
+            <td class="col-label">Sous-total des plus ou moins-values réalisées nettes avant comptes de régularisation (E)</td>
+            <td class="col-n">{{ fmt(cr2_n.sous_total_pvmv_realisees_E) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.sous_total_pvmv_realisees_E) }}</td>{% endif %}
+        </tr>
+
+        <tr class="l2 sep-after">
+            <td class="col-label">Régularisation des plus ou moins-values réalisées nettes (F)</td>
+            <td class="col-n">{{ fmt(cr2_n.regularisation_pvmv_realisees_F) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.regularisation_pvmv_realisees_F) }}</td>{% endif %}
+        </tr>
+        <tr class="total sep-thick">
+            <td class="col-label">Plus ou moins-values réalisées nettes II = (E) + (F)</td>
+            <td class="col-n">{{ fmt(cr2_n.pvmv_realisees_nettes_II) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.pvmv_realisees_nettes_II) }}</td>{% endif %}
+        </tr>
+
+        {# ── PVMV latentes ───────────────────────────────────────────── #}
+        <tr class="subsection sep-top">
+            <td class="col-label">Plus ou moins-values latentes nettes avant comptes de régularisation</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Variation des plus ou moins-values latentes, y compris les écarts de change sur les actifs éligibles</td>
+            <td class="col-n">{{ fmt(cr2_n.variation_pvmv_latentes) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.variation_pvmv_latentes) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Ecarts de change sur les comptes financiers en devises</td>
+            <td class="col-n">{{ fmt(cr2_n.ecarts_change_comptes_financiers) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.ecarts_change_comptes_financiers) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Versements en garantie de capital ou de performance à recevoir</td>
+            <td class="col-n">{{ fmt(cr2_n.versements_garantie_capital_lat) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.versements_garantie_capital_lat) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Quote-part des plus-values latentes à restituer aux assureurs</td>
+            <td class="col-n">{{ fmt(cr2_n.quote_part_pv_latentes_assureurs) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.quote_part_pv_latentes_assureurs) }}</td>{% endif %}
+        </tr>
+        <tr class="sous-total sep-after">
+            <td class="col-label">Sous-total des plus ou moins-values latentes nettes avant comptes de régularisation (G)</td>
+            <td class="col-n">{{ fmt(cr2_n.sous_total_pvmv_latentes_G) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.sous_total_pvmv_latentes_G) }}</td>{% endif %}
+        </tr>
+
+        <tr class="l2 sep-after">
+            <td class="col-label">Régularisation des plus ou moins-values latentes nettes (H)</td>
+            <td class="col-n">{{ fmt(cr2_n.regularisation_pvmv_latentes_H) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.regularisation_pvmv_latentes_H) }}</td>{% endif %}
+        </tr>
+        <tr class="total sep-thick">
+            <td class="col-label">Plus ou moins-values latentes nettes III = (G) + (H)</td>
+            <td class="col-n">{{ fmt(cr2_n.pvmv_latentes_nettes_III) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.pvmv_latentes_nettes_III) }}</td>{% endif %}
+        </tr>
+
+        {# ── Acomptes ─────────────────────────────────────────────────── #}
+        <tr class="subsection sep-top">
+            <td class="col-label">Acomptes</td>
+            <td class="col-n"></td>
+            {% if has_n1 %}<td class="col-n1"></td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Acomptes sur revenus nets versés au titre de l'exercice (J)</td>
+            <td class="col-n">{{ fmt(cr2_n.acomptes_revenus_nets_J) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.acomptes_revenus_nets_J) }}</td>{% endif %}
+        </tr>
+        <tr class="l2">
+            <td class="col-label">Acomptes sur plus ou moins-values réalisées nettes versés au titre de l'exercice (K)</td>
+            <td class="col-n">{{ fmt(cr2_n.acomptes_pvmv_realisees_K) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.acomptes_pvmv_realisees_K) }}</td>{% endif %}
+        </tr>
+        <tr class="sous-total sep-after">
+            <td class="col-label">Total acomptes versés au titre de l'exercice IV = (J) + (K)</td>
+            <td class="col-n">{{ fmt(cr2_n.total_acomptes_IV) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.total_acomptes_IV) }}</td>{% endif %}
+        </tr>
+
+        {# ── Impôt + Résultat final ────────────────────────────────────── #}
+        <tr class="l2 sep-after">
+            <td class="col-label">Impôt sur le résultat V</td>
+            <td class="col-n">{{ fmt(cr2_n.impot_resultat_V) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.impot_resultat_V) }}</td>{% endif %}
+        </tr>
+        <tr class="resultat-final sep-thick">
+            <td class="col-label">Résultat net I + II + III - IV - V</td>
+            <td class="col-n">{{ fmt(cr2_n.resultat_net) }}</td>
+            {% if has_n1 %}<td class="col-n1">{{ fmt(cr2_n1.resultat_net) }}</td>{% endif %}
+        </tr>
+
+        </tbody>
+    </table>
+
+    <div class="filler">
+        <div class="filler-label"></div>
+        <div class="filler-n"></div>
+        {% if has_n1 %}<div class="filler-n1"></div>{% endif %}
+    </div>
+
+</div>
+
+</body>
+</html>

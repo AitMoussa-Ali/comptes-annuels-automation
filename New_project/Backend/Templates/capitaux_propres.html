@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+
+@page {
+    size: A4 portrait;
+    margin: 12mm 18mm 18mm 18mm;
+    @top-center {
+        content: "{{ nom_fond }} - Comptes annuels au {{ date_cloture }}";
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+    @bottom-right {
+        content: "Page " counter(page) " sur " counter(pages);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 8pt;
+    color: #000;
+    height: 100%;
+}
+
+/* ── Titre de section ── */
+.section-title {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-bottom: 3mm;
+    flex-shrink: 0;
+}
+
+/* ── Conteneur principal ── */
+.page-content {
+    width: 100%;
+    border: 0.5pt solid #000;
+    margin-top: 2mm;
+}
+
+/* ── Header du tableau ── */
+.header-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.header-table td {
+    border-right: 0.5pt solid #000;
+    border-bottom: 0.75pt solid #000;
+    font-weight: bold;
+    padding: 4pt;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.header-table td:last-child {
+    border-right: none;
+}
+
+.header-row .col-label {
+    font-size: 8pt;
+    text-align: left;
+}
+
+.header-row .col-sign,
+.header-row .col-n,
+.header-row .col-n1,
+.header-row .col-var {
+    font-size: 8pt;
+    text-align: center;
+}
+
+
+
+
+
+
+/* ── Tableau ── */
+.cp-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    flex-shrink: 0;
+}
+
+/* Largeurs des colonnes */
+.cp-table col.col-label { width: 49%; }
+.cp-table col.col-sign  { width: 4%; }
+.cp-table col.col-n     { width: 15%; }
+.cp-table col.col-n1    { width: 15%; }
+.cp-table col.col-var   { width: 17%; }
+
+.cp-table td {
+    padding: 1pt 4pt;
+    border-right: 0.5pt solid #000;
+    height: 11pt;
+    vertical-align: middle;
+    font-size: 8pt;
+    line-height: 1.05;
+}
+.cp-table td:last-child { border-right: none; }
+
+/* Col signe */
+.cp-table td.col-sign {
+    text-align: center;
+    font-size: 9pt;
+}
+
+/* Colonnes numériques : alignées à droite */
+.cp-table td.col-n,
+.cp-table td.col-n1,
+.cp-table td.col-var {
+    text-align: right;
+    padding-right: 6pt;
+    font-size: 8pt;
+}
+
+/* ── Styles de lignes ── */
+
+/* Titre de groupe (GRAS) */
+.cp-table tr.groupe td {
+    font-weight: bold;
+}
+.cp-table tr.groupe td.col-label {
+    padding-left: 3pt;
+}
+
+/* Ligne normale (indentée) */
+.cp-table tr.normal td.col-label {
+    padding-left: 8pt;
+}
+
+/* Séparateurs */
+.cp-table tr.sep-bottom td { border-bottom: 0.5pt solid #000; }
+.cp-table tr.sep-thick td  { border-top: 0.75pt solid #000; border-bottom: 0.75pt solid #000; }
+.cp-table tr.sep-top td    { border-top: 0.5pt solid #000; }
+
+/* Total final */
+.cp-table tr.total td {
+    font-weight: bold;
+    border-top: 0.75pt solid #000;
+    border-bottom: 0.75pt solid #000;
+}
+
+
+
+/* ── Notes de bas de tableau ── */
+.notes {
+    flex-shrink: 0;
+    margin-top: 6pt;
+    font-size: 6.8pt;
+    font-style: italic;
+    line-height: 1.1;
+}
+.notes p { margin-top: 1pt; }
+.notes .detail-ligne {
+    margin-left: 10pt;
+    display: flex;
+    gap: 4pt;
+}
+
+/* ── Footer logo ── */
+.footer-logo {
+    position: fixed;
+    bottom: -12mm;
+    left: 0mm;   /* même marge que le body */
+    height: 8mm;
+    width: auto;
+}
+
+</style>
+</head>
+<body>
+{% if logo_url %}
+<img class="footer-logo" src="{{ logo_url }}" alt="Logo">
+{% endif %}
+<p class="section-title">III. Reconstitution de la ligne "capitaux propres"</p>
+
+<div class="page-content">
+
+    <!-- Header -->
+    <table class="cp-table header-table">
+    <colgroup>
+        <col class="col-label">
+        <col class="col-sign">
+        <col class="col-n">
+        <col class="col-n1">
+        <col class="col-var">
+    </colgroup>
+
+    <tr class="header-row">
+        <td class="col-label">
+            Reconstitution de la ligne des capitaux propres depuis l'origine
+        </td>
+        <td class="col-sign"></td>
+        <td class="col-n">{{ cp.meta.label_col_n }}</td>
+        <td class="col-n1">{{ cp.meta.label_col_n1 }}</td>
+        <td class="col-var">Variation Exercice N</td>
+    </tr>
+</table>
+
+    <table class="cp-table">
+        <colgroup>
+            <col class="col-label">
+            <col class="col-sign">
+            <col class="col-n">
+            <col class="col-n1">
+            <col class="col-var">
+        </colgroup>
+        <tbody>
+
+        {# ── APPORTS ─────────────────────────────────────────────────── #}
+        <tr class="groupe">
+            <td class="col-label">Apports</td>
+            <td class="col-sign">+</td>
+            <td class="col-n">{{ fmt(cp.sous_total_apports.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.sous_total_apports.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.sous_total_apports.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Capital souscrit (1)</td>
+            <td class="col-sign">+</td>
+            <td class="col-n">{{ fmt(cp.capital_souscrit.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.capital_souscrit.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.capital_souscrit.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Capital non appelé (2)</td>
+            <td class="col-sign">-</td>
+            <td class="col-n">{{ fmt(cp.capital_non_appele.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.capital_non_appele.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.capital_non_appele.variation) }}</td>
+        </tr>
+        <tr class="normal sep-bottom">
+            <td class="col-label">Emission de passifs de financement</td>
+            <td class="col-sign">+</td>
+            <td class="col-n">{{ fmt(cp.emission_passifs_financement.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.emission_passifs_financement.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.emission_passifs_financement.variation) }}</td>
+        </tr>
+
+        {# ── RÉSULTAT DE GESTION ──────────────────────────────────────── #}
+        <tr class="groupe">
+            <td class="col-label">Résultat de gestion</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.sous_total_resultat_gestion.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.sous_total_resultat_gestion.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.sous_total_resultat_gestion.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Revenus nets de l'exercice</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.revenus_nets_exercice.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.revenus_nets_exercice.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.revenus_nets_exercice.variation) }}</td>
+        </tr>
+        <tr class="normal sep-bottom">
+            <td class="col-label">Cumul des revenus nets des exercices précédents</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.cumul_revenus_nets_precedents.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.cumul_revenus_nets_precedents.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.cumul_revenus_nets_precedents.variation) }}</td>
+        </tr>
+
+        {# ── PVMV RÉALISÉES ───────────────────────────────────────────── #}
+        <tr class="groupe">
+            <td class="col-label">Plus ou moins-values réalisées nettes</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.sous_total_pvmv_realisees.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.sous_total_pvmv_realisees.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.sous_total_pvmv_realisees.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Plus ou moins-values réalisées nettes de l'exercice</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.pvmv_realisees_exercice.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.pvmv_realisees_exercice.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.pvmv_realisees_exercice.variation) }}</td>
+        </tr>
+        <tr class="normal sep-bottom">
+            <td class="col-label">Cumul plus ou moins-values réalisées nettes des exercices précédents</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.cumul_pvmv_realisees_precedents.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.cumul_pvmv_realisees_precedents.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.cumul_pvmv_realisees_precedents.variation) }}</td>
+        </tr>
+
+        {# ── PVMV LATENTES ────────────────────────────────────────────── #}
+        <tr class="groupe">
+            <td class="col-label">Variation des plus ou moins-values latentes nettes</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.sous_total_pvmv_latentes.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.sous_total_pvmv_latentes.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.sous_total_pvmv_latentes.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Plus ou moins-values latentes nettes de l'exercice</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.pvmv_latentes_exercice.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.pvmv_latentes_exercice.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.pvmv_latentes_exercice.variation) }}</td>
+        </tr>
+        <tr class="normal sep-bottom">
+            <td class="col-label">Cumul plus ou moins-values latentes nettes des exercices précédents</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.cumul_pvmv_latentes_precedents.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.cumul_pvmv_latentes_precedents.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.cumul_pvmv_latentes_precedents.variation) }}</td>
+        </tr>
+
+        {# ── BONI DE LIQUIDATION ──────────────────────────────────────── #}
+        <tr class="normal sep-bottom">
+            <td class="col-label">Boni de liquidation</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.boni_liquidation.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.boni_liquidation.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.boni_liquidation.variation) }}</td>
+        </tr>
+
+        {# ── RACHATS ET RÉPARTITIONS ───────────────────────────────────── #}
+        <tr class="groupe">
+            <td class="col-label">Rachats et répartition d'actifs</td>
+            <td class="col-sign">-</td>
+            <td class="col-n">{{ fmt(cp.sous_total_rachats_repartitions.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.sous_total_rachats_repartitions.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.sous_total_rachats_repartitions.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Rachats</td>
+            <td class="col-sign">-</td>
+            <td class="col-n">{{ fmt(cp.rachats.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.rachats.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.rachats.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Répartition d'actifs</td>
+            <td class="col-sign">-</td>
+            <td class="col-n">{{ fmt(cp.repartition_actifs.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.repartition_actifs.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.repartition_actifs.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Distribution de résultats nets</td>
+            <td class="col-sign">-</td>
+            <td class="col-n">{{ fmt(cp.distribution_resultats_nets.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.distribution_resultats_nets.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.distribution_resultats_nets.variation) }}</td>
+        </tr>
+        <tr class="normal">
+            <td class="col-label">Distribution de plus et moins-values réalisées nettes</td>
+            <td class="col-sign">-</td>
+            <td class="col-n">{{ fmt(cp.distribution_pvmv_realisees.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.distribution_pvmv_realisees.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.distribution_pvmv_realisees.variation) }}</td>
+        </tr>
+        <tr class="normal sep-bottom">
+            <td class="col-label">Remboursement de passifs de financement</td>
+            <td class="col-sign">-</td>
+            <td class="col-n">{{ fmt(cp.remboursement_passifs_financement.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.remboursement_passifs_financement.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.remboursement_passifs_financement.variation) }}</td>
+        </tr>
+
+        {# ── AUTRES ÉLÉMENTS ── conditionnel selon la valeur ──────────── #}
+        <tr class="normal sep-bottom">
+            <td class="col-label">{{ cp.label_autres_elements }}</td>
+            <td class="col-sign">+/-</td>
+            <td class="col-n">{{ fmt(cp.autres_elements.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.autres_elements.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.autres_elements.variation) }}</td>
+        </tr>
+
+        {# ── TOTAL ─────────────────────────────────────────────────────── #}
+        <tr class="total">
+            <td class="col-label">Capitaux propres et passifs de financement en fin d'exercice</td>
+            <td class="col-sign">=</td>
+            <td class="col-n">{{ fmt(cp.total_capitaux_propres.n) }}</td>
+            <td class="col-n1">{{ fmt(cp.total_capitaux_propres.n1) }}</td>
+            <td class="col-var">{{ fmt(cp.total_capitaux_propres.variation) }}</td>
+        </tr>
+
+        </tbody>
+    </table>
+
+
+
+</div>
+
+<!-- ── Notes de bas de tableau ────────────────────────────────────────── -->
+<div class="notes">
+    <p>(1) y compris les commissions de souscription acquises à l'OPC de capital investissement</p>
+    <p>(2) sous déduction des commissions de rachat acquises à l'OPC de capital investissement</p>
+
+    {# Note (3) : conditionnelle — affichée seulement si autres_elements ≠ 0 #}
+    {% if cp.meta.autres_elements_detail %}
+    <p>(3) Les autres éléments sont constitués de :</p>
+    {% if cp.meta.autres_elements_detail.frais_constitution is not none %}
+    <div class="detail-ligne">
+        <span style="width:140pt">- Frais de constitution :</span>
+        <span>{{ fmt_abs(cp.meta.autres_elements_detail.frais_constitution) }} €</span>
+    </div>
+    {% endif %}
+    {% if cp.meta.autres_elements_detail.prime_souscription is not none %}
+    <div class="detail-ligne">
+        <span style="width:140pt">- Prime de souscription :</span>
+        <span>{{ fmt_abs(cp.meta.autres_elements_detail.prime_souscription) }} €</span>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {# Note premier exercice : si label contient "*" #}
+    {% if cp.meta.premier_exercice %}
+    <p>* Premier exercice</p>
+    {% endif %}
+</div>
+
+</body>
+</html>
