@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+
+@page {
+    size: A4 portrait;
+    margin: 12mm 18mm 18mm 18mm;
+    @top-center {
+        content: "{{ nom_fond }} - Comptes annuels au {{ date_cloture }}";
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+    @bottom-right {
+        content: "Page " counter(page) " sur " counter(pages);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9pt;
+    color: #000;
+}
+
+.section-title {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-bottom: 3mm;
+}
+.sub-title {
+    font-size: 9pt;
+    font-style: italic;
+    text-decoration: underline;
+    margin-bottom: 4mm;
+}
+
+/* ── Un seul tableau, header + body fusionnés ── */
+.expo-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 0.5pt solid #000;
+}
+
+/* Largeurs des colonnes — définies une seule fois via colgroup */
+.expo-table col.col-label  { width: 52%; }
+.expo-table col.col-ci     { width: 16%; }
+.expo-table col.col-autres { width: 16%; }
+.expo-table col.col-total  { width: 16%; }
+
+/* ── Header ── */
+.expo-table thead tr th {
+    padding: 4pt 5pt;
+    font-weight: bold;
+    font-size: 9pt;
+    text-align: center;
+    vertical-align: middle;         /* texte en bas de la cellule header */
+    border-right: 0.5pt solid #000;
+    border-bottom: 0.5pt solid #000;
+}
+.expo-table thead tr th:last-child { border-right: none; }
+.expo-table thead tr th.col-label  { text-align: left; }
+
+/* ── Cellules body ── */
+.expo-table tbody tr td {
+    padding: 2pt 5pt;
+    border-right: 0.5pt solid #000;
+    height: 14pt;
+    vertical-align: middle;
+    font-size: 9pt;
+}
+.expo-table tbody tr td:last-child { border-right: none; }
+
+/* Colonnes numériques : alignées à droite */
+.expo-table tbody tr td.col-ci,
+.expo-table tbody tr td.col-autres,
+.expo-table tbody tr td.col-total {
+    text-align: right;
+    padding-right: 8pt;
+}
+
+/* ── Styles de lignes ── */
+.expo-table tr.categorie td.col-label  { padding-left: 3pt;  font-weight: normal; }
+.expo-table tr.sous-ligne td.col-label { padding-left: 18pt; font-weight: normal; }
+.expo-table tr.ligne td.col-label      { padding-left: 3pt;  font-weight: normal; }
+.expo-table tr.total td                { font-weight: bold; border-top: 0.5pt solid #000; }
+
+/* Séparateur bas de groupe */
+.expo-table tr.sep td { border-bottom: 0.5pt solid #000; }
+/* ── Footer logo ── */
+.footer-logo {
+    position: fixed;
+    bottom: -12mm;
+    left: 0mm;   /* même marge que le body */
+    height: 8mm;
+    width: auto;
+}
+</style>
+</head>
+<body>
+{% if logo_url %}
+<img class="footer-logo" src="{{ logo_url }}" alt="Logo">
+{% endif %}
+<p class="section-title">VIII. Exposition sur les portefeuilles de capital-investissement</p>
+<p class="sub-title">8.1 – Ventilation entre actifs de capital investissement et autres actifs éligibles</p>
+
+<table class="expo-table">
+    <colgroup>
+        <col class="col-label">
+        <col class="col-ci">
+        <col class="col-autres">
+        <col class="col-total">
+    </colgroup>
+
+    <thead>
+        <tr>
+            <th class="col-label">
+                Ventilation entre actifs de capital investissement et autres actifs éligibles
+            </th>
+            <th class="col-ci">Actifs de capital investissement</th>
+            <th class="col-autres">Autres actifs</th>
+            <th class="col-total">Total de la rubrique au bilan</th>
+        </tr>
+    </thead>
+
+    <tbody>
+
+    {# ── Actions ─────────────────────────────────── #}
+    <tr class="categorie">
+        <td class="col-label">Actions</td>
+        <td class="col-ci"></td>
+        <td class="col-autres"></td>
+        <td class="col-total"></td>
+    </tr>
+    <tr class="sous-ligne">
+        <td class="col-label">Cotées</td>
+        <td class="col-ci">{{ fmt(expo.actions.cotees.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.actions.cotees.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.actions.cotees.total) }}</td>
+    </tr>
+    <tr class="sous-ligne sep">
+        <td class="col-label">Non cotées</td>
+        <td class="col-ci">{{ fmt(expo.actions.non_cotees.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.actions.non_cotees.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.actions.non_cotees.total) }}</td>
+    </tr>
+
+    {# ── Obligations convertibles ─────────────────── #}
+    <tr class="categorie">
+        <td class="col-label">Obligations convertibles</td>
+        <td class="col-ci"></td>
+        <td class="col-autres"></td>
+        <td class="col-total"></td>
+    </tr>
+    <tr class="sous-ligne">
+        <td class="col-label">Cotées</td>
+        <td class="col-ci">{{ fmt(expo.obligations_convertibles.cotees.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.obligations_convertibles.cotees.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.obligations_convertibles.cotees.total) }}</td>
+    </tr>
+    <tr class="sous-ligne sep">
+        <td class="col-label">Non cotées</td>
+        <td class="col-ci">{{ fmt(expo.obligations_convertibles.non_cotees.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.obligations_convertibles.non_cotees.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.obligations_convertibles.non_cotees.total) }}</td>
+    </tr>
+
+    {# ── Autres obligations ───────────────────────── #}
+    <tr class="categorie">
+        <td class="col-label">Autres obligations</td>
+        <td class="col-ci"></td>
+        <td class="col-autres"></td>
+        <td class="col-total"></td>
+    </tr>
+    <tr class="sous-ligne">
+        <td class="col-label">Cotées</td>
+        <td class="col-ci">{{ fmt(expo.autres_obligations.cotees.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.autres_obligations.cotees.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.autres_obligations.cotees.total) }}</td>
+    </tr>
+    <tr class="sous-ligne sep">
+        <td class="col-label">Non cotées</td>
+        <td class="col-ci">{{ fmt(expo.autres_obligations.non_cotees.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.autres_obligations.non_cotees.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.autres_obligations.non_cotees.total) }}</td>
+    </tr>
+
+    {# ── Lignes simples ───────────────────────────── #}
+    <tr class="ligne sep">
+        <td class="col-label">Titres de créances</td>
+        <td class="col-ci">{{ fmt(expo.titres_creances.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.titres_creances.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.titres_creances.total) }}</td>
+    </tr>
+    <tr class="ligne sep">
+        <td class="col-label">Parts d'OPC et Fonds d'investissement</td>
+        <td class="col-ci">{{ fmt(expo.parts_opc.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.parts_opc.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.parts_opc.total) }}</td>
+    </tr>
+    <tr class="ligne sep">
+        <td class="col-label">Prêts (avances en compte-courant)</td>
+        <td class="col-ci">{{ fmt(expo.prets.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.prets.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.prets.total) }}</td>
+    </tr>
+    <tr class="ligne sep">
+        <td class="col-label">Autres actifs éligibles</td>
+        <td class="col-ci">{{ fmt(expo.autres_actifs_eligibles.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.autres_actifs_eligibles.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.autres_actifs_eligibles.total) }}</td>
+    </tr>
+
+    {# ── Total ─────────────────────────────────────── #}
+    <tr class="total">
+        <td class="col-label">Total</td>
+        <td class="col-ci">{{ fmt(expo.total.capital_investissement) }}</td>
+        <td class="col-autres">{{ fmt(expo.total.autres_actifs) }}</td>
+        <td class="col-total">{{ fmt(expo.total.total) }}</td>
+    </tr>
+
+    </tbody>
+</table>
+
+</body>
+</html>

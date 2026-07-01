@@ -4,7 +4,7 @@ from fastapi import UploadFile
 
 from Data_manipulation.Data_extraction import Data_extraction
 from Controllers.BilanController import BilanController
-
+from Controllers.TextExtractionController import PdfToDictController
 async def UploadController(
     anciennete: str,
     fichier_vl_n: UploadFile,
@@ -31,9 +31,13 @@ async def UploadController(
     if anciennete == "A":
         result_n_1 = await extractor.extracting_data_n_1()
 
+    pdf_bytes = await comptes_annuels.read()
+    texts = await PdfToDictController(pdf_bytes)
+    
     result = {
         "N" : result_n,
-        "N_1" : result_n_1
+        "N_1" : result_n_1,
+        "Data extracted" : texts
     }
     
     

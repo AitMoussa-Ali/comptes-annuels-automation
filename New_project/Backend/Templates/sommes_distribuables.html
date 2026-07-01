@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+
+@page {
+    size: A4 portrait;
+    margin: 12mm 18mm 18mm 18mm;
+    @top-center {
+        content: "{{ nom_fond }} - Comptes annuels au {{ date_cloture }}";
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+    @bottom-right {
+        content: "Page " counter(page) " sur " counter(pages);
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9pt;
+        color: #000;
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { height: 100%; }
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 9pt;
+    color: #000;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.section-title {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-bottom: 3mm;
+    flex-shrink: 0;
+}
+
+.intro-text {
+    font-size: 9pt;
+    margin-bottom: 4mm;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+/* ── Les deux blocs côte à côte dans le flux vertical ── */
+.bloc {
+    border: 0.5pt solid #000;
+    flex-shrink: 0;
+    margin-bottom: 5mm;
+}
+
+/* ── Header du bloc ── */
+.bloc-header {
+    display: flex;
+    border-bottom: 0.5pt solid #000;
+}
+.bloc-header .col-label {
+    flex: 0 0 57.9%;
+    padding: 3pt 5pt;
+    font-weight: bold;
+    font-size: 9pt;
+    border-right: 0.5pt solid #000;
+}
+.bloc-header .col-n,
+.bloc-header .col-n1 {
+    flex: 0 0 18.3%;
+    padding: 3pt 4pt;
+    font-weight: bold;
+    font-size: 9pt;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.bloc-header .col-n { border-right: 0.5pt solid #000; }
+
+/* ── Tableau interne ── */
+.sd-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+.sd-table col.col-label { width: 60%; }
+.sd-table col.col-n     { width: 20%; }
+.sd-table col.col-n1    { width: 20%; }
+
+.sd-table td {
+    padding: 1.5pt 5pt;
+    border-right: 0.5pt solid #000;
+    height: 13pt;
+    vertical-align: middle;
+    font-size: 9pt;
+}
+.sd-table td:last-child { border-right: none; }
+
+.sd-table td.col-n,
+.sd-table td.col-n1 {
+    text-align: right;
+    padding-right: 8pt;
+}
+
+/* ── Styles exact du template Aplitec ── */
+
+/* Ligne gras (Revenus nets, Revenus à affecter, Sommes distribuables) */
+.sd-table tr.bold td { font-weight: bold; }
+
+/* Ligne normale légèrement indentée */
+.sd-table tr.indent td.col-label { padding-left: 12pt; }
+
+/* Titre de sous-section "Affectation :" */
+.sd-table tr.affectation-titre td.col-label {
+    font-weight: normal;
+    padding-left: 4pt;
+}
+
+/* Lignes distribution / report / capitalisation */
+.sd-table tr.affect-ligne td.col-label { padding-left: 12pt; }
+
+/* Total (gras + bordures épaisses) */
+.sd-table tr.total td {
+    font-weight: bold;
+    border-top: 0.75pt solid #000;
+    border-bottom: 0.75pt solid #000;
+}
+
+/* Ligne info-titre (*Information...) en gras italique */
+.sd-table tr.info-titre td {
+    font-weight: bold;
+    font-style: italic;
+    border-top: 0.5pt solid #000;
+}
+.sd-table tr.info-titre td.col-label { padding-left: 4pt; }
+
+/* Lignes détail info */
+.sd-table tr.info-ligne td.col-label { padding-left: 12pt; }
+
+/* Séparateurs */
+.sd-table tr.sep td   { border-bottom: 0.5pt solid #000; }
+
+/* Remplissage bas de page */
+.filler { flex: 1; min-height: 3mm; }
+
+/* ── Footer logo ── */
+.footer-logo {
+    position: fixed;
+    bottom: -12mm;
+    left: 0mm;   /* même marge que le body */
+    height: 8mm;
+    width: auto;
+}
+
+</style>
+</head>
+<body>
+{% if logo_url %}
+<img class="footer-logo" src="{{ logo_url }}" alt="Logo">
+{% endif %}
+<p class="section-title">XIII. Détermination et ventilation des sommes distribuables</p>
+
+<p class="intro-text">{{ sd.meta.note_generale }}</p>
+
+{# ══════════════════════════════════════════
+   BLOC 1 — Revenus nets
+   ══════════════════════════════════════════ #}
+<div class="bloc">
+    <div class="bloc-header">
+        <div class="col-label">Affectation des sommes distribuables afférentes aux revenus nets</div>
+        <div class="col-n">{{ sd.meta.label_exercice_n }}</div>
+        <div class="col-n1">{{ sd.meta.label_exercice_n1 }}</div>
+    </div>
+    <table class="sd-table">
+        <colgroup>
+            <col class="col-label"><col class="col-n"><col class="col-n1">
+        </colgroup>
+        <tbody>
+
+        {# Revenus nets — GRAS #}
+        <tr class="bold sep">
+            <td class="col-label">Revenus nets</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.revenus_nets.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.revenus_nets.n1) }}</td>
+        </tr>
+
+        {# Acomptes — indenté, pas gras #}
+        <tr class="indent sep">
+            <td class="col-label">Acomptes sur revenus nets versés au titre de l'exercice (*)</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.acomptes_sur_revenus_nets.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.acomptes_sur_revenus_nets.n1) }}</td>
+        </tr>
+
+        {# Revenus à affecter — GRAS #}
+        <tr class="bold sep">
+            <td class="col-label">Revenus de l'exercice à affecter (**)</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.revenus_exercice_a_affecter.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.revenus_exercice_a_affecter.n1) }}</td>
+        </tr>
+
+        {# Report à nouveau — indenté #}
+        <tr class="indent sep">
+            <td class="col-label">Report à nouveau</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.report_a_nouveau.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.report_a_nouveau.n1) }}</td>
+        </tr>
+
+        {# Sommes distribuables — GRAS #}
+        <tr class="bold sep">
+            <td class="col-label">Sommes distribuables au titre du revenu net</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.sommes_distribuables_revenus.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.sommes_distribuables_revenus.n1) }}</td>
+        </tr>
+
+        {# Affectation : #}
+        <tr class="affectation-titre">
+            <td class="col-label">Affectation :</td>
+            <td class="col-n"></td><td class="col-n1"></td>
+        </tr>
+        <tr class="affect-ligne">
+            <td class="col-label">Distribution</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.affectation.distribution.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.affectation.distribution.n1) }}</td>
+        </tr>
+        <tr class="affect-ligne">
+            <td class="col-label">Report à nouveau du revenu de l'exercice</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.affectation.report_a_nouveau_exo.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.affectation.report_a_nouveau_exo.n1) }}</td>
+        </tr>
+        <tr class="affect-ligne sep">
+            <td class="col-label">Capitalisation</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.affectation.capitalisation.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.affectation.capitalisation.n1) }}</td>
+        </tr>
+
+        {# Total — gras + bordures épaisses #}
+        <tr class="total">
+            <td class="col-label">Total</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.affectation.total.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.affectation.total.n1) }}</td>
+        </tr>
+
+        {# *Information acomptes #}
+        <tr class="info-titre sep">
+            <td class="col-label">*Information relative aux acomptes versés</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.acomptes_info.montant_unitaire.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.acomptes_info.montant_unitaire.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Montant unitaire</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.acomptes_info.montant_unitaire.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.acomptes_info.montant_unitaire.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Crédits d'impôts totaux</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.acomptes_info.credits_impots_totaux.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.acomptes_info.credits_impots_totaux.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Crédits d'impôts unitaires</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.acomptes_info.credits_impots_unitaires.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.acomptes_info.credits_impots_unitaires.n1) }}</td>
+        </tr>
+
+        {# **Information parts #}
+        <tr class="info-titre sep">
+            <td class="col-label">**Information relative aux actions ou parts ouvrant droit à distribution</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.parts_info.nombre_parts.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.parts_info.nombre_parts.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Nombre d'actions ou de parts</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.parts_info.nombre_parts.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.parts_info.nombre_parts.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Distribution unitaire restant à verser après règlement des acomptes</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.parts_info.distribution_unitaire.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.parts_info.distribution_unitaire.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Crédit d'impôt attaché à la distribution du revenu</td>
+            <td class="col-n">{{ fmt(sd.revenus_nets.parts_info.credit_impot_distribution.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.revenus_nets.parts_info.credit_impot_distribution.n1) }}</td>
+        </tr>
+
+        </tbody>
+    </table>
+</div>
+
+{% if sd.meta.premier_exercice %}
+<p style="font-size:8pt; font-style:italic; margin-bottom:3mm;">* Premier exercice</p>
+{% endif %}
+
+{# ══════════════════════════════════════════
+   BLOC 2 — PVMV réalisées
+   ══════════════════════════════════════════ #}
+<div class="bloc">
+    <div class="bloc-header">
+        <div class="col-label">Affectation des sommes distribuables afférentes aux plus et moins-values réalisées nettes</div>
+        <div class="col-n">{{ sd.meta.label_exercice_n }}</div>
+        <div class="col-n1">{{ sd.meta.label_exercice_n1 }}</div>
+    </div>
+    <table class="sd-table">
+        <colgroup>
+            <col class="col-label"><col class="col-n"><col class="col-n1">
+        </colgroup>
+        <tbody>
+
+        {# PVMV réal. nettes — GRAS #}
+        <tr class="bold sep">
+            <td class="col-label">Plus ou moins-values réalisées nettes de l'exercice</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.pvmv_realisees_nettes.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.pvmv_realisees_nettes.n1) }}</td>
+        </tr>
+
+        {# Acomptes — indenté #}
+        <tr class="indent sep">
+            <td class="col-label">Acomptes sur plus et moins-values réalisées nettes versées au titre de l'exercice (*)</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.acomptes_sur_pvmv_realisees.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.acomptes_sur_pvmv_realisees.n1) }}</td>
+        </tr>
+
+        {# PVMV à affecter — GRAS #}
+        <tr class="bold sep">
+            <td class="col-label">Plus ou moins-values réalisées nettes à affecter (**)</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.pvmv_realisees_a_affecter.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.pvmv_realisees_a_affecter.n1) }}</td>
+        </tr>
+
+        {# Antérieures — indenté #}
+        <tr class="indent sep">
+            <td class="col-label">Plus et moins-values réalisées nettes antérieures non distribuées</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.pvmv_anterieures_non_distribuees.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.pvmv_anterieures_non_distribuees.n1) }}</td>
+        </tr>
+
+        {# Sommes distribuables PVMV — GRAS #}
+        <tr class="bold sep">
+            <td class="col-label">Sommes distribuables au titre des plus ou moins-values réalisées</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.sommes_distribuables_pvmv.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.sommes_distribuables_pvmv.n1) }}</td>
+        </tr>
+
+        {# Affectation : #}
+        <tr class="affectation-titre">
+            <td class="col-label">Affectation :</td>
+            <td class="col-n"></td><td class="col-n1"></td>
+        </tr>
+        <tr class="affect-ligne">
+            <td class="col-label">Distribution</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.affectation.distribution.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.affectation.distribution.n1) }}</td>
+        </tr>
+        <tr class="affect-ligne">
+            <td class="col-label">Report à nouveau des plus et moins-values réalisées nettes</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.affectation.report_a_nouveau_pvmv.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.affectation.report_a_nouveau_pvmv.n1) }}</td>
+        </tr>
+        <tr class="affect-ligne sep">
+            <td class="col-label">Capitalisation</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.affectation.capitalisation.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.affectation.capitalisation.n1) }}</td>
+        </tr>
+
+        {# Total #}
+        <tr class="total">
+            <td class="col-label">Total</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.affectation.total.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.affectation.total.n1) }}</td>
+        </tr>
+
+        {# *Information acomptes #}
+        <tr class="info-titre sep">
+            <td class="col-label">*Information relative aux acomptes versés</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.acomptes_info.acomptes_unitaires.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.acomptes_info.acomptes_unitaires.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Acomptes unitaires versés</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.acomptes_info.acomptes_unitaires.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.acomptes_info.acomptes_unitaires.n1) }}</td>
+        </tr>
+
+        {# **Information parts #}
+        <tr class="info-titre sep">
+            <td class="col-label">**Information relative aux actions ou parts ouvrant droit à distribution</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.parts_info.nombre_parts.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.parts_info.nombre_parts.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Nombre d'actions ou de parts</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.parts_info.nombre_parts.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.parts_info.nombre_parts.n1) }}</td>
+        </tr>
+        <tr class="info-ligne">
+            <td class="col-label">Distribution unitaire restant à verser après règlement des acomptes</td>
+            <td class="col-n">{{ fmt(sd.pvmv_realisees.parts_info.distribution_unitaire.n) }}</td>
+            <td class="col-n1">{{ fmt(sd.pvmv_realisees.parts_info.distribution_unitaire.n1) }}</td>
+        </tr>
+
+        </tbody>
+    </table>
+</div>
+
+{% if sd.meta.premier_exercice %}
+<p style="font-size:8pt; font-style:italic; margin-bottom:3mm;">* Premier exercice</p>
+{% endif %}
+
+<div class="filler"></div>
+
+</body>
+</html>

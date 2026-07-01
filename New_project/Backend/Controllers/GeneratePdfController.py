@@ -124,11 +124,13 @@ def _merge(pdf_list: list[bytes]) -> bytes:
 # ═══════════════════════════════════════════════════════════════════════════════
 
 async def GeneratePdfController(
-    bilan:             dict,
-    compte_resultat:   dict,
-    nom_fond:          str,
-    date_cloture:      str,
-    capitaux_propres:  Optional[dict] = None,
+    bilan:                    dict,
+    compte_resultat:          dict,
+    nom_fond:                 str,
+    date_cloture:             str,
+    capitaux_propres:         Optional[dict] = None,
+    exposition_portefeuille:  Optional[dict] = None,
+    sommes_distribuables:     Optional[dict] = None,
 ) -> bytes:
     """
     Génère le PDF complet :
@@ -167,7 +169,16 @@ async def GeneratePdfController(
     cr2_n1 = _wrap(compte_resultat["compte_resultat_2"]["exercice_n1"]) if has_n1 else _wrap({})
 
     # ── Données capitaux propres (optionnel) ──────────────────────────────
-    cp_data = _wrap(capitaux_propres["capitaux_propres"]) if capitaux_propres else None
+    cp_data   = _wrap(capitaux_propres["capitaux_propres"]) if capitaux_propres else None
+
+    # ── Données exposition portefeuille (optionnel) ───────────────────────
+    expo_data = None
+    if exposition_portefeuille:
+        ep = exposition_portefeuille["exposition_portefeuille"]
+        expo_data = _wrap(ep.get("exercice_n", ep))
+
+    # ── Données sommes distribuables (optionnel) ──────────────────────────
+    sd_data = _wrap(sommes_distribuables["sommes_distribuables"]) if sommes_distribuables else None
 
     # ── Contexte commun ───────────────────────────────────────────────────
     logo_url = _logo_to_data_url(LOGO_PATH) if LOGO_PATH.exists() else ""
@@ -190,6 +201,16 @@ async def GeneratePdfController(
         pages_html.append(
             _render("capitaux_propres.html", {**base_ctx, "cp": cp_data})
         )
+    # Page 6 : Exposition portefeuille (optionnel)
+    if expo_data is not None:
+        pages_html.append(
+            _render("exposition_portefeuille.html", {**base_ctx, "expo": expo_data})
+        )
+    # Page 7 : Sommes distribuables (optionnel)
+    if sd_data is not None:
+        pages_html.append(
+            _render("sommes_distribuables.html", {**base_ctx, "sd": sd_data})
+        )
 
     total_pages = len(pages_html)
 
@@ -204,11 +225,13 @@ async def GeneratePdfController(
 
 # ── Alias rétrocompatibilité ──────────────────────────────────────────────────
 async def generer_bilan_pdf(
-    bilan:              dict,
-    nom_fond:           str,
-    date_cloture:       str,
-    compte_resultat:    Optional[dict] = None,
-    capitaux_propres:   Optional[dict] = None,
+    bilan:                   dict,
+    nom_fond:                str,
+    date_cloture:            str,
+    compte_resultat:         Optional[dict] = None,
+    capitaux_propres:        Optional[dict] = None,
+    exposition_portefeuille: Optional[dict] = None,
+    sommes_distribuables:    Optional[dict] = None,
     # Anciens paramètres ignorés (WeasyPrint gère la pagination)
     total_pages: int = 2,
     page_actif:  int = 1,
@@ -225,6 +248,8 @@ async def generer_bilan_pdf(
             nom_fond=nom_fond,
             date_cloture=date_cloture,
             capitaux_propres=capitaux_propres,
+            exposition_portefeuille=exposition_portefeuille,
+            sommes_distribuables=sommes_distribuables,
         )
 
     # Mode 2 pages : bilan uniquement (rétrocompatibilité)
